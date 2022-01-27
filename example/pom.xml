@@ -1,0 +1,170 @@
+<!--
+   Copyright (C) 2016 Red Hat, Inc.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.bf2</groupId>
+        <artifactId>olm-bundle-tools</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>olm-bundle-example</artifactId>
+    <name>olm-bundle-example</name>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.version>3.6.0</maven.version>
+        <kafka-fleetshard-version>999-SNAPSHOT</kafka-fleetshard-version>
+        <docker-repo>${USER}</docker-repo>
+        <docker-registry>quay.io</docker-registry>
+        <bundle-name>kas-fleetshard-bundle</bundle-name>
+        <bundle-version>${kafka-fleetshard-version}</bundle-version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bf2</groupId>
+            <artifactId>kas-fleetshard-operator</artifactId>
+            <version>${kafka-fleetshard-version}</version>
+            <classifier>kubernetes</classifier>
+            <type>yml</type>
+        </dependency>
+        <dependency>
+            <groupId>org.bf2</groupId>
+            <artifactId>kas-fleetshard-operator</artifactId>
+            <version>${kafka-fleetshard-version}</version>
+            <classifier>crd-managedkafkas</classifier>
+            <type>yml</type>
+        </dependency>
+        <dependency>
+            <groupId>org.bf2</groupId>
+            <artifactId>kas-fleetshard-operator</artifactId>
+            <version>${kafka-fleetshard-version}</version>
+            <classifier>crd-managedkafkaagents</classifier>
+            <type>yml</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.bf2</groupId>
+                <artifactId>olm-bundle-maven-plugin</artifactId>
+                <version>${project.version}</version>
+                <configuration>
+                    <bundle-name>${bundle-name}</bundle-name>
+                    <bundle-version>${bundle-version}</bundle-version>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>assembly.xml</descriptor>
+                    </descriptors>
+                    <attach>true</attach>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.38.1</version>
+                <executions>
+                    <execution>
+                        <id>build-bundle</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <name>${docker-registry}/${docker-repo}/${bundle-name}:${bundle-version}</name>
+                                    <build>
+                                        <dockerFileDir>${project.build.directory}/bundle/${bundle-version}</dockerFileDir>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>                        
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>                  
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>build-index</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>opm</executable>
+                            <arguments>
+                                <argument>index</argument>
+                                <argument>add</argument>
+                                <argument>--bundles</argument>
+                                <argument>${docker-registry}/${docker-repo}/${bundle-name}:${bundle-version}</argument>
+                                <argument>--tag</argument>
+                                <argument>${docker-registry}/${docker-repo}/${bundle-name}:index</argument>
+                                <argument>-c</argument>
+                                <argument>docker</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- failed docker-maven-plugin as it fails to interleave build tasks -->
+                        <id>push-index</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>docker</executable>
+                            <arguments>
+                                <argument>push</argument>
+                                <argument>${docker-registry}/${docker-repo}/${bundle-name}:index</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>                    
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

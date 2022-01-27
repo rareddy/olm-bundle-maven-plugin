@@ -1,5 +1,22 @@
 # Compiled class file
 *.class
+.settings
+.classpath
+.checkstyle
+target/
+.project
+database/
+.prefs
+.apt_generated/
+.apt_generated_tests/
+
+# IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.factorypath
+.vscode
 
 # Log file
 *.log
