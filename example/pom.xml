@@ -21,7 +21,7 @@
 
     <artifactId>olm-bundle-example</artifactId>
     <name>olm-bundle-example</name>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <properties>
         <maven.version>3.6.0</maven.version>
